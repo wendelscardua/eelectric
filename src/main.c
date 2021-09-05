@@ -502,6 +502,7 @@ void moving (void) {
 
 void game_over (void) {
   // TODO: display game over
+  clear_vram_buffer();
   go_to_title();
 }
 
