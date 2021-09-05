@@ -42,7 +42,6 @@ unsigned int temp_int;
 enum game_state {
                  Title,
                  Moving,
-                 Shocking,
                  GameOver
 } current_game_state;
 
@@ -58,7 +57,8 @@ unsigned char eel_y[EEL_MAX_SIZE];
 unsigned char eel_dir[EEL_MAX_SIZE];
 
 unsigned char eel_length, eel_head, eel_tail,
-  eel_frame_counter, eel_speed, eel_growth;
+  eel_frame_counter, eel_speed, eel_growth,
+  eel_energy;
 
 unsigned char current_direction;
 
@@ -219,9 +219,10 @@ void start_game (void) {
   eel_dir[0] = eel_dir[1] = eel_dir[2] = eel_dir[3] = eel_dir[4] = RIGHT;
   eel_head = 4;
   eel_tail = 0;
-  eel_speed = 2;
+  eel_speed = 4;
   eel_growth = 4;
   eel_frame_counter = 0;
+  eel_energy = 0xff;
   current_direction = RIGHT;
 
   piranha_count = 0;
@@ -230,7 +231,7 @@ void start_game (void) {
 
 void erase_tail (unsigned char x, unsigned char y) {
   one_vram_buffer(EMPTY_TILE, NTADR_A(x, y));
-  for(i = 0; i < piranha_count; i++) {
+  for(i = 0; i < piranha_count; ++i) {
     if (piranha_eating_index[i] == eel_tail) {
       piranha_eating_index[i] = 0xff;
     }
@@ -289,6 +290,15 @@ void move_eel (void) {
   draw_head(temp_x, temp_y, current_direction);
 }
 
+void shock_attack (void) {
+  // TODO shock effect
+  for(i = 0; i < piranha_count; ++i) {
+    if (piranha_state[i] == Eating) {
+      piranha_state[i] = Dead;
+    }
+  }
+}
+
 void handle_moving_input (void) {
   pad_poll(0);
   temp = get_pad_new(0);
@@ -301,6 +311,8 @@ void handle_moving_input (void) {
     current_direction = LEFT;
   } else if (temp & PAD_RIGHT) {
     current_direction = RIGHT;
+  } else if (temp & PAD_A) {
+    shock_attack();
   }
 }
 
@@ -328,6 +340,8 @@ void maybe_add_piranhas (void) {
   if (piranha_spawn_timer > 0) return;
 
   piranha_spawn_timer = 2 * rand8();
+
+  piranha_state[piranha_count] = Swimming;
 
   do {
     temp_int = rand16();
@@ -374,7 +388,7 @@ unsigned char piranha_on_eel (unsigned char index) {
 }
 
 void move_piranhas (void) {
-  for(i = 0; i < piranha_count; i++) {
+  for(i = 0; i < piranha_count; ++i) {
     switch(piranha_state[i]) {
     case Swimming:
       move_piranha(i);
@@ -404,6 +418,20 @@ void move_piranhas (void) {
       }
       break;
     case Dead:
+      temp = rand8();
+      if (temp < 0x08) {
+        ++piranha_y[i];
+        if (piranha_y[i] > BOTTOM_BORDER) {
+          --piranha_count;
+          piranha_x[i] = piranha_x[piranha_count];
+          piranha_y[i] = piranha_y[piranha_count];
+          piranha_target_x[i] = piranha_target_x[piranha_count];
+          piranha_target_y[i] = piranha_target_y[piranha_count];
+          piranha_eating_index[i] = piranha_eating_index[piranha_count];
+          piranha_state[i] = piranha_state[piranha_count];
+          --i;
+        }
+      }
       break;
     }
   }
@@ -412,6 +440,8 @@ void move_piranhas (void) {
 void moving (void) {
   clear_vram_buffer();
   handle_moving_input();
+
+  if (current_game_state != Moving) return;
 
   move_eel();
 
@@ -423,7 +453,7 @@ void moving (void) {
 void draw_sprites (void) {
   oam_clear();
 
-  for(i = 0; i < piranha_count; i++) {
+  for(i = 0; i < piranha_count; ++i) {
     if (piranha_state[i] == Dead) {
       oam_meta_spr(piranha_x[i], piranha_y[i], DeadPiranhaSprite);
     } else {
