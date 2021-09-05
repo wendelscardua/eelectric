@@ -58,7 +58,9 @@ unsigned char eel_dir[EEL_MAX_SIZE];
 
 unsigned char eel_length, eel_head, eel_tail,
   eel_frame_counter, eel_speed, eel_growth,
-  eel_energy;
+  eel_energy, eel_level_up;
+
+unsigned int eel_health, eel_max_health;
 
 unsigned char current_direction;
 
@@ -106,8 +108,10 @@ const unsigned char middle_tile[] = {
 };
 
 void draw_sprites (void);
+void go_to_title (void);
 void start_game (void);
 void moving (void);
+void game_over (void);
 
 void main (void) {
   set_mirroring(MIRROR_HORIZONTAL);
@@ -122,11 +126,6 @@ void main (void) {
   ppu_off(); // screen off
   pal_bg(palette_bg); //	load the BG palette
   pal_spr(palette_spr); // load the sprite palette
-
-  // draw some things
-  vram_adr(NTADR_A(0,0));
-  unrle(title_nametable);
-
   // load red alpha and drawing as bg chars
   // and unused as sprites
   set_chr_mode_2(0);
@@ -136,17 +135,10 @@ void main (void) {
   set_chr_mode_0(4);
   set_chr_mode_1(6);
 
-  music_play(0);
-
-  draw_sprites();
-
-  // game setup
-  current_game_state = Title;
+  go_to_title();
 
   unseeded = 1;
 
-
-  ppu_on_all(); //	turn on screen
 
   set_vram_buffer();
   clear_vram_buffer();
@@ -223,6 +215,8 @@ void start_game (void) {
   eel_growth = 4;
   eel_frame_counter = 0;
   eel_energy = 0xff;
+  eel_health = eel_max_health = 1000;
+  eel_level_up = 0;
   current_direction = RIGHT;
 
   piranha_count = 0;
@@ -291,12 +285,16 @@ void move_eel (void) {
 }
 
 void shock_attack (void) {
+  if (eel_energy < 0xff) return;
+
   // TODO shock effect
   for(i = 0; i < piranha_count; ++i) {
     if (piranha_state[i] == Eating) {
       piranha_state[i] = Dead;
     }
   }
+
+  eel_energy = 0x00;
 }
 
 void handle_moving_input (void) {
@@ -387,6 +385,27 @@ unsigned char piranha_on_eel (unsigned char index) {
   return 0;
 }
 
+unsigned char piranha_on_eel_head (unsigned char index) {
+  temp = eel_head;
+  temp_x = piranha_x[index] >> 3;
+  temp_y = piranha_y[index] >> 3;
+  if (temp_x == eel_x[temp] &&
+      temp_y == eel_y[temp]) {
+    return 1;
+  }
+  return 0;
+}
+
+void delete_piranha (unsigned char index) {
+  --piranha_count;
+  piranha_x[index] = piranha_x[piranha_count];
+  piranha_y[index] = piranha_y[piranha_count];
+  piranha_target_x[index] = piranha_target_x[piranha_count];
+  piranha_target_y[index] = piranha_target_y[piranha_count];
+  piranha_eating_index[index] = piranha_eating_index[piranha_count];
+  piranha_state[index] = piranha_state[piranha_count];
+}
+
 void move_piranhas (void) {
   for(i = 0; i < piranha_count; ++i) {
     switch(piranha_state[i]) {
@@ -411,24 +430,33 @@ void move_piranhas (void) {
       break;
     case Eating:
       if (piranha_on_eel(i)) {
-        // TODO: eat
+        // TODO maybe eating noise
+        if (eel_health > 0) --eel_health;
       } else {
         piranha_retarget_eel(i);
         piranha_state[i] = GettingFood;
       }
       break;
     case Dead:
+      if (piranha_on_eel_head(i)) {
+        delete_piranha(i);
+        ++eel_level_up;
+        if (eel_level_up == 5) {
+          eel_level_up = 0;
+          eel_max_health += 200;
+          if (eel_speed < 24) ++eel_speed;
+        }
+        eel_health += 80;
+        if (eel_health > eel_max_health) eel_health = eel_max_health;
+        if (eel_energy < 0xf8) eel_energy += 0x8;
+        if (eel_length + 2 < EEL_MAX_SIZE) eel_growth = 2;
+        break;
+      }
       temp = rand8();
       if (temp < 0x08) {
         ++piranha_y[i];
         if (piranha_y[i] > BOTTOM_BORDER) {
-          --piranha_count;
-          piranha_x[i] = piranha_x[piranha_count];
-          piranha_y[i] = piranha_y[piranha_count];
-          piranha_target_x[i] = piranha_target_x[piranha_count];
-          piranha_target_y[i] = piranha_target_y[piranha_count];
-          piranha_eating_index[i] = piranha_eating_index[piranha_count];
-          piranha_state[i] = piranha_state[piranha_count];
+          delete_piranha(i);
           --i;
         }
       }
@@ -437,8 +465,26 @@ void move_piranhas (void) {
   }
 }
 
+void check_eel_status (void) {
+  if (eel_energy < 0xff) ++eel_energy;
+  if (eel_energy < 0xff) ++eel_energy;
+  // TODO display energy, hp, etc
+}
+
+void go_to_title (void) {
+  ppu_off(); // screen off
+  // draw some things
+  vram_adr(NTADR_A(0,0));
+  unrle(title_nametable);
+  music_play(0);
+  draw_sprites();
+  ppu_on_all(); //	turn on screen
+  current_game_state = Title;
+}
+
 void moving (void) {
   clear_vram_buffer();
+
   handle_moving_input();
 
   if (current_game_state != Moving) return;
@@ -448,10 +494,21 @@ void moving (void) {
   maybe_add_piranhas();
 
   move_piranhas();
+
+  check_eel_status();
+
+  if (eel_health == 0) game_over();
+}
+
+void game_over (void) {
+  // TODO: display game over
+  go_to_title();
 }
 
 void draw_sprites (void) {
   oam_clear();
+
+  if (current_game_state != Moving) return;
 
   for(i = 0; i < piranha_count; ++i) {
     if (piranha_state[i] == Dead) {
