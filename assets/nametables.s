@@ -1,7 +1,7 @@
 .segment "RODATA"
 
 .export _title_nametable
-.export _quiz_nametable
+.export _main_nametable
 
 _title_nametable: .incbin "nametables/title.rle"
-_quiz_nametable: .incbin "nametables/quiz.rle"
+_main_nametable: .incbin "nametables/main.rle"
