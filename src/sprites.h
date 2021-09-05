@@ -10,6 +10,6 @@ const unsigned char PiranhaSpriteL[]={
 };
 
 const unsigned char DeadPiranhaSprite[]={
-                                         - 7,- 7,0x01,2,
+                                         - 7,- 7,0x01,1,
                                          128
 };
