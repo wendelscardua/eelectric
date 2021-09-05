@@ -68,6 +68,7 @@ enum {
       Dead
 } piranha_state[MAX_PIRANHAS];
 unsigned char piranha_count;
+unsigned int piranha_spawn_timer;
 
 #pragma bss-name(push, "XRAM")
 // extra RAM at $6000-$7fff
@@ -217,6 +218,7 @@ void start_game (void) {
   current_direction = RIGHT;
 
   piranha_count = 0;
+  piranha_spawn_timer = 120;
 }
 
 void erase_tail (unsigned char x, unsigned char y) {
@@ -292,7 +294,11 @@ void handle_moving_input (void) {
 
 void maybe_add_piranhas (void) {
   if (piranha_count == MAX_PIRANHAS) return;
-  if (rand8() > MAX_PIRANHAS - piranha_count) return;
+
+  --piranha_spawn_timer;
+  if (piranha_spawn_timer > 0) return;
+
+  piranha_spawn_timer = 2 * rand8();
 
   do {
     temp_x = rand8();
