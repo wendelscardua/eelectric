@@ -56,6 +56,19 @@ unsigned char eel_length, eel_head, eel_tail,
 
 unsigned char current_direction;
 
+#define MAX_PIRANHAS 16
+unsigned char piranha_x[MAX_PIRANHAS];
+unsigned char piranha_y[MAX_PIRANHAS];
+unsigned char piranha_target_x[MAX_PIRANHAS];
+unsigned char piranha_target_y[MAX_PIRANHAS];
+enum {
+      Swimming,
+      GettingFood,
+      Eating,
+      Dead
+} piranha_state[MAX_PIRANHAS];
+unsigned char piranha_count;
+
 #pragma bss-name(push, "XRAM")
 // extra RAM at $6000-$7fff
 unsigned char wram_array[0x2000];
@@ -72,10 +85,7 @@ const unsigned char palette_bg[] = {
 };
 
 const unsigned char palette_spr[]={
-                                   0x01,0x0f,0x10,0x30,
-                                   0x01,0x16,0x2a,0x20,
-                                   0x01,0x28,0x16,0x20,
-                                   0x01,0x09,0x19,0x29
+                                   0x02,0x1a,0x2a,0x3a,0x02,0x07,0x17,0x3c,0x02,0x06,0x16,0x26,0x02,0x09,0x19,0x29
 };
 
 const unsigned char head_per_direction[] = { 0x03, 0x04, 0x05, 0x06 };
@@ -202,9 +212,11 @@ void start_game (void) {
   eel_head = 4;
   eel_tail = 0;
   eel_speed = 2;
-  eel_growth = 0;
+  eel_growth = 4;
   eel_frame_counter = 0;
   current_direction = RIGHT;
+
+  piranha_count = 0;
 }
 
 void erase_tail (unsigned char x, unsigned char y) {
@@ -278,12 +290,55 @@ void handle_moving_input (void) {
   }
 }
 
+void maybe_add_piranhas (void) {
+  if (piranha_count == MAX_PIRANHAS) return;
+  if (rand8() > MAX_PIRANHAS - piranha_count) return;
+
+  do {
+    temp_x = rand8();
+  } while (temp_x < 0x10 || temp_x >= 0xf0);
+  piranha_x[piranha_count] = temp_x;
+
+  do {
+    temp_y = rand8();
+  } while (temp_y < 0x20 || temp_y >= 0xc0);
+  piranha_y[piranha_count] = temp_y;
+
+  do {
+    temp_x = rand8();
+  } while (temp_x < 0x10 || temp_x >= 0xf0);
+  piranha_target_x[piranha_count] = temp_x;
+
+  do {
+    temp_y = rand8();
+  } while (temp_y < 0x20 || temp_y >= 0xc0);
+  piranha_target_y[piranha_count] = temp_y;
+
+  ++piranha_count;
+}
+
 void moving (void) {
   clear_vram_buffer();
   handle_moving_input();
+
   move_eel();
+
+  maybe_add_piranhas();
 }
 
 void draw_sprites (void) {
   oam_clear();
+
+  for(i = 0; i < piranha_count; i++) {
+    if (piranha_state[i] == Dead) {
+      oam_meta_spr(piranha_x[i], piranha_y[i], DeadPiranhaSprite);
+    } else {
+      if (piranha_x[i] < piranha_target_x[i] ||
+          (piranha_x[i] == piranha_target_x[i] && i % 2)) {
+        oam_meta_spr(piranha_x[i], piranha_y[i], PiranhaSpriteR);
+      } else {
+        oam_meta_spr(piranha_x[i], piranha_y[i], PiranhaSpriteL);
+      }
+    }
+  }
 }

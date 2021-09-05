@@ -1017,59 +1017,52 @@ _pad_state:
 ;Galois random generator, found somewhere
 ;out: A random number 0..255
 
-rand1:
-
-	lda <RAND_SEED
-	asl a
-	bcc @1
-	eor #$cf
-
-@1:
-
-	sta <RAND_SEED
-	rts
-
-rand2:
-
-	lda <RAND_SEED+1
-	asl a
-	bcc @1
-	eor #$d7
-
-@1:
-
-	sta <RAND_SEED+1
-	rts
-
-_rand8:
-
-	jsr rand1
-	jsr rand2
-	adc <RAND_SEED
-	ldx #0
-	rts
-
-
+.proc _rand8
+  JSR _rand16
+  LDX #0
+  RTS
+.endproc
 
 ;unsigned int __fastcall__ rand16(void);
 
-_rand16:
-
-	jsr rand1
-	tax
-	jsr rand2
-
-	rts
-
+.proc _rand16
+  LDA RAND_SEED+1
+  TAX ; store copy of high byte
+  ; compute RAND_SEED+1 ($39>>1 = %11100)
+  LSR ; shift to consume zeroes on left...
+  LSR
+  LSR
+  STA RAND_SEED+1 ; now recreate the remaining bits in reverse order... %111
+  LSR
+  EOR RAND_SEED+1
+  LSR
+  EOR RAND_SEED+1
+  EOR RAND_SEED+0 ; recombine with original low byte
+  STA RAND_SEED+1
+  ; compute RAND_SEED+0 ($39 = %111001)
+  TXA ; original high byte
+  STA RAND_SEED+0
+  ASL
+  EOR RAND_SEED+0
+  ASL
+  EOR RAND_SEED+0
+  ASL
+  ASL
+  ASL
+  EOR RAND_SEED+0
+  STA RAND_SEED+0
+  LDX RAND_SEED+1
+  RTS
+.endproc
 
 ;void __fastcall__ set_rand(unsigned char seed);
 
 _set_rand:
 
-	sta <RAND_SEED
-	stx <RAND_SEED+1
+sta <RAND_SEED
+stx <RAND_SEED+1
 
-	rts
+rts
 
 
 

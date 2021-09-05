@@ -24,7 +24,7 @@ ${TARGET}: src/main.o src/crt0.o src/lib/unrle.o \
 src/main.s: src/main.c assets/nametables.h
 	cc65 -Oirs src/main.c --add-source ${CA65_FLAGS}
 
-src/crt0.o: src/crt0.s assets/*.chr
+src/crt0.o: src/crt0.s src/mmc3/mmc3_code.asm src/lib/neslib.s src/lib/nesdoug.s assets/*.chr
 	ca65 $< ${CA65_FLAGS}
 
 assets/nametables.o: assets/nametables.s assets/nametables.h \
