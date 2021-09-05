@@ -37,6 +37,13 @@ enum game_state {
 unsigned char irq_array[32];
 unsigned char double_buffer[32];
 
+#define EEL_MAX_SIZE 64
+unsigned char eel_x[EEL_MAX_SIZE];
+unsigned char eel_y[EEL_MAX_SIZE];
+unsigned char eel_direction[EEL_MAX_SIZE];
+
+unsigned char eel_length;
+
 #pragma bss-name(push, "XRAM")
 // extra RAM at $6000-$7fff
 unsigned char wram_array[0x2000];
@@ -60,6 +67,7 @@ const unsigned char palette_spr[]={
 #pragma code-name ("CODE")
 
 void draw_sprites (void);
+void start_game (void);
 
 void main (void) {
   set_mirroring(MIRROR_HORIZONTAL);
@@ -117,6 +125,7 @@ void main (void) {
         seed_rng();
         unseeded = 0;
       }
+      start_game();
       break;
     }
 
@@ -143,6 +152,23 @@ void main (void) {
     // memcpy(void *dst,void *src,unsigned int len);
     memcpy(irq_array, double_buffer, sizeof(irq_array));
   }
+}
+
+void start_game (void) {
+  current_game_state = Moving;
+
+  ppu_off(); // screen off
+  pal_bg(palette_bg); //	load the BG palette
+  pal_spr(palette_spr); // load the sprite palette
+
+  // draw some things
+  vram_adr(NTADR_A(0,0));
+  unrle(main_nametable);
+
+  ppu_on_all();
+
+  set_vram_buffer();
+  clear_vram_buffer();
 }
 
 void draw_sprites (void) {
