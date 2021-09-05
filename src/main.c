@@ -316,8 +316,9 @@ void piranha_retarget_random (unsigned char index) {
 }
 
 void piranha_retarget_eel (unsigned char index) {
-  piranha_target_x[index] = eel_x[eel_head] << 3;
-  piranha_target_y[index] = eel_y[eel_head] << 3;
+  temp = rand8();
+  piranha_target_x[index] = eel_x[eel_head] << 3 | (temp & 0x7);
+  piranha_target_y[index] = eel_y[eel_head] << 3 | ((temp >> 3) & 0x7);
 }
 
 void maybe_add_piranhas (void) {
