@@ -22,7 +22,7 @@ unsigned char pad1_new;
 unsigned char double_buffer_index;
 
 unsigned char temp, i, unseeded,
-  temp_x, temp_y;
+  temp_x, temp_y, health_changed, score_changed;
 unsigned int temp_int;
 
 // game stuff
@@ -60,9 +60,12 @@ unsigned char eel_length, eel_head, eel_tail,
   eel_frame_counter, eel_speed, eel_growth,
   eel_energy, eel_level_up;
 
-unsigned int eel_health, eel_max_health;
+unsigned int eel_health, eel_max_health, eel_score;
 
 unsigned char current_direction;
+
+unsigned char health_buffer[5];
+unsigned char score_buffer[5];
 
 #define MAX_PIRANHAS 8
 unsigned char piranha_x[MAX_PIRANHAS];
@@ -188,6 +191,58 @@ void main (void) {
   }
 }
 
+void display_health (void) {
+  health_buffer[0] = 0x40;
+  temp_int = eel_health;
+  while(temp_int >= 10000) {
+    temp_int -= 10000;
+    ++health_buffer[0];
+  }
+  health_buffer[1] = 0x40;
+  while(temp_int >= 1000) {
+    temp_int -= 1000;
+    ++health_buffer[1];
+  }
+  health_buffer[2] = 0x40;
+  while(temp_int >= 100) {
+    temp_int -= 100;
+    ++health_buffer[2];
+  }
+  health_buffer[3] = 0x40;
+  while(temp_int >= 10) {
+    temp_int -= 10;
+    ++health_buffer[3];
+  }
+  health_buffer[4] = 0x40 + temp_int;
+  multi_vram_buffer_horz(health_buffer, 5, NTADR_A(10, 26));
+}
+
+void display_score (void) {
+  score_buffer[0] = 0x40;
+  temp_int = eel_score;
+  while(temp_int >= 10000) {
+    temp_int -= 10000;
+    ++score_buffer[0];
+  }
+  score_buffer[1] = 0x40;
+  while(temp_int >= 1000) {
+    temp_int -= 1000;
+    ++score_buffer[1];
+  }
+  score_buffer[2] = 0x40;
+  while(temp_int >= 100) {
+    temp_int -= 100;
+    ++score_buffer[2];
+  }
+  score_buffer[3] = 0x40;
+  while(temp_int >= 10) {
+    temp_int -= 10;
+    ++score_buffer[3];
+  }
+  score_buffer[4] = 0x40 + temp_int;
+  multi_vram_buffer_horz(score_buffer, 5, NTADR_A(10, 27));
+}
+
 void start_game (void) {
   ppu_off(); // screen off
   pal_bg(palette_bg); //	load the BG palette
@@ -216,6 +271,7 @@ void start_game (void) {
   eel_frame_counter = 0;
   eel_energy = 64;
   eel_health = eel_max_health = 1000;
+  display_health();
   eel_level_up = 0;
   current_direction = RIGHT;
 
@@ -409,6 +465,7 @@ void delete_piranha (unsigned char index) {
 }
 
 void move_piranhas (void) {
+
   for(i = 0; i < piranha_count; ++i) {
     switch(piranha_state[i]) {
     case Swimming:
@@ -433,7 +490,10 @@ void move_piranhas (void) {
     case Eating:
       if (piranha_on_eel(i)) {
         // TODO maybe eating noise
-        if (eel_health > 0) --eel_health;
+        if (eel_health > 0) {
+          --eel_health;
+          health_changed = 1;
+        }
       } else {
         piranha_retarget_eel(i);
         piranha_state[i] = GettingFood;
@@ -442,16 +502,23 @@ void move_piranhas (void) {
     case Dead:
       if (piranha_on_eel_head(i)) {
         delete_piranha(i);
+        eel_score += 50;
+        score_changed = 1;
         ++eel_level_up;
         if (eel_level_up == 5) {
           eel_level_up = 0;
           eel_max_health += 200;
           if (eel_speed < 24) ++eel_speed;
         }
+        health_changed = 1;
         eel_health += 80;
         if (eel_health > eel_max_health) eel_health = eel_max_health;
-        if (eel_energy < 64-8) eel_energy += 8;
+
+        eel_energy += 16;
+        if (eel_energy > 64) eel_energy = 64;
+
         if (eel_length + 2 < EEL_MAX_SIZE) eel_growth = 2;
+
         break;
       }
       temp = rand8();
@@ -468,8 +535,7 @@ void move_piranhas (void) {
 }
 
 void check_eel_status (void) {
-  if (eel_energy < 64) ++eel_energy;
-  // TODO display hp, etc
+  if (eel_energy < 64 && rand8() < 32) ++eel_energy;
   temp_x = 4;
   for(i = 0; i < 4; ++i) {
     if (i * 16 > eel_energy) {
@@ -482,6 +548,15 @@ void check_eel_status (void) {
     one_vram_buffer(0x12 + temp, NTADR_A(temp_x, 26));
     one_vram_buffer(0x12 + temp, NTADR_A(temp_x, 27));
     ++temp_x;
+  }
+
+  if (health_changed) {
+    display_health();
+    health_changed = 0;
+  }
+  if (score_changed) {
+    display_score();
+    score_changed = 0;
   }
 }
 void go_to_title (void) {
@@ -497,6 +572,9 @@ void go_to_title (void) {
 
 void moving (void) {
   clear_vram_buffer();
+
+  health_changed = 0;
+  score_changed = 0;
 
   handle_moving_input();
 
