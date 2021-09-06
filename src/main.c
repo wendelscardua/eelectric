@@ -110,6 +110,9 @@ const unsigned char middle_tile[] = {
                                      0x0b, 0x0a, 0x08, 0x08
 };
 
+const unsigned char over_string[] = {0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77};
+const unsigned char start_string[] = {0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67};
+
 void draw_sprites (void);
 void go_to_title (void);
 void start_game (void);
@@ -155,7 +158,7 @@ void main (void) {
       do {
         ppu_wait_nmi();
         pad_poll(0);
-      } while(get_pad_new(0) == 0);
+      } while((get_pad_new(0) & PAD_START) == 0);
       if (unseeded) {
         seed_rng();
         unseeded = 0;
@@ -455,8 +458,9 @@ unsigned char piranha_on_eel (unsigned char index) {
       piranha_eating_index[index] = temp;
       return 1;
     }
+    if (temp == eel_head) break;
     temp = (temp + 1) % EEL_MAX_SIZE;
-  } while(temp != eel_head);
+  } while(1);
   return 0;
 }
 
@@ -611,7 +615,14 @@ void moving (void) {
 }
 
 void game_over (void) {
-  // TODO: display game over
+  multi_vram_buffer_horz(over_string, 8, NTADR_A(12, 12));
+  multi_vram_buffer_horz(start_string, 8, NTADR_A(12, 13));
+
+  do {
+    ppu_wait_nmi();
+    pad_poll(0);
+  } while((get_pad_new(0) & PAD_START) == 0);
+
   clear_vram_buffer();
   go_to_title();
 }
