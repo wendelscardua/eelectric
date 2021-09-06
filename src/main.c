@@ -369,6 +369,8 @@ void move_eel (void) {
 void shock_attack (void) {
   if (eel_energy < 16) return;
 
+  eel_energy -= 16;
+
   sfx_play(0, 0);
 
   for(i = 0; i < 12; i++) {
@@ -384,10 +386,9 @@ void shock_attack (void) {
   for(i = 0; i < piranha_count; ++i) {
     if (piranha_state[i] == Eating) {
       piranha_state[i] = Dead;
+      piranha_y[i] += 8;
     }
   }
-
-  eel_energy -= 16;
 }
 
 void handle_moving_input (void) {
