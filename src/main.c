@@ -14,7 +14,6 @@
 #pragma bss-name(push, "ZEROPAGE")
 
 // GLOBAL VARIABLES
-
 unsigned char arg1;
 unsigned char arg2;
 unsigned char pad1;
@@ -123,6 +122,20 @@ void start_game (void);
 void moving (void);
 void game_over (void);
 
+void thunder (void) {
+  sfx_play(0, 0);
+
+  for(i = 0; i < 12; i++) {
+    ppu_wait_nmi();
+    pal_bg(palette_thunder);
+    ppu_wait_nmi();
+    ppu_wait_nmi();
+    ppu_wait_nmi();
+    ppu_wait_nmi();
+    pal_bg(palette_bg);
+  }
+}
+
 void main (void) {
   set_mirroring(MIRROR_HORIZONTAL);
   bank_spr(1);
@@ -163,6 +176,7 @@ void main (void) {
         ppu_wait_nmi();
         pad_poll(0);
       } while((get_pad_new(0) & PAD_START) == 0);
+      thunder();
       if (unseeded) {
         seed_rng();
         unseeded = 0;
@@ -371,17 +385,7 @@ void shock_attack (void) {
 
   eel_energy -= 16;
 
-  sfx_play(0, 0);
-
-  for(i = 0; i < 12; i++) {
-    ppu_wait_nmi();
-    pal_bg(palette_thunder);
-    ppu_wait_nmi();
-    ppu_wait_nmi();
-    ppu_wait_nmi();
-    ppu_wait_nmi();
-    pal_bg(palette_bg);
-  }
+  thunder();
 
   for(i = 0; i < piranha_count; ++i) {
     if (piranha_state[i] == Eating) {
