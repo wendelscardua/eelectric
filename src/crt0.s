@@ -371,7 +371,7 @@ jmp _main			;no parameters
 .segment "RODATA"
 
 music_data:
-.include "music/testmusic3.s"
+.include "music/soundtrack.s"
 
 sounds_data:
 .include "music/soundfx.s"
