@@ -365,7 +365,8 @@ void move_eel (void) {
 void shock_attack (void) {
   if (eel_energy < 16) return;
 
-  // TODO shock effect
+  sfx_play(0, 0);
+
   for(i = 0; i < piranha_count; ++i) {
     if (piranha_state[i] == Eating) {
       piranha_state[i] = Dead;
