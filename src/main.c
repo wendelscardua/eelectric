@@ -387,13 +387,15 @@ unsigned char piranha_on_eel (unsigned char index) {
 
 unsigned char piranha_on_eel_head (unsigned char index) {
   temp = eel_head;
-  temp_x = piranha_x[index] >> 3;
-  temp_y = piranha_y[index] >> 3;
-  if (temp_x == eel_x[temp] &&
-      temp_y == eel_y[temp]) {
-    return 1;
+  temp_x = eel_x[temp] << 3;
+  temp_y = eel_y[temp] << 3;
+  if (piranha_x[index] < temp_x - 4||
+      piranha_x[index] > temp_x + 12 ||
+      piranha_y[index] < temp_y - 4 ||
+      piranha_y[index] > temp_y + 12) {
+    return 0;
   }
-  return 0;
+  return 1;
 }
 
 void delete_piranha (unsigned char index) {
