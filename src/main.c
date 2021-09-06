@@ -341,7 +341,7 @@ void move_eel (void) {
 }
 
 void shock_attack (void) {
-  if (eel_energy < 64) return;
+  if (eel_energy < 16) return;
 
   // TODO shock effect
   for(i = 0; i < piranha_count; ++i) {
@@ -350,7 +350,7 @@ void shock_attack (void) {
     }
   }
 
-  eel_energy = 0;
+  eel_energy -= 16;
 }
 
 void handle_moving_input (void) {
