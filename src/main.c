@@ -101,6 +101,10 @@ const unsigned char palette_spr[]={
                                    0x02,0x1a,0x2a,0x3a,0x02,0x07,0x17,0x26,0x02,0x06,0x16,0x26,0x02,0x09,0x19,0x29
 };
 
+const unsigned char palette_thunder[] = {
+                                         0x02,0x28,0x38,0x30,0x02,0x07,0x17,0x3c,0x02,0x07,0x28,0x0f,0x02,0x09,0x19,0x29
+};
+
 const unsigned char head_per_direction[] = { 0x03, 0x04, 0x05, 0x06 };
 const unsigned char tail_per_direction[] = { 0x0d, 0x0e, 0x0f, 0x10 };
 const unsigned char middle_tile[] = {
@@ -366,6 +370,16 @@ void shock_attack (void) {
   if (eel_energy < 16) return;
 
   sfx_play(0, 0);
+
+  for(i = 0; i < 12; i++) {
+    ppu_wait_nmi();
+    pal_bg(palette_thunder);
+    ppu_wait_nmi();
+    ppu_wait_nmi();
+    ppu_wait_nmi();
+    ppu_wait_nmi();
+    pal_bg(palette_bg);
+  }
 
   for(i = 0; i < piranha_count; ++i) {
     if (piranha_state[i] == Eating) {
