@@ -257,13 +257,26 @@ void start_game (void) {
   current_game_state = Moving;
 
   eel_length = 5;
-  eel_x[0] = 7;
-  eel_x[1] = 8;
-  eel_x[2] = 9;
-  eel_x[3] = 10;
-  eel_x[4] = 11;
-  eel_y[0] = eel_y[1] = eel_y[2] = eel_y[3] = eel_y[4] = 15;
-  eel_dir[0] = eel_dir[1] = eel_dir[2] = eel_dir[3] = eel_dir[4] = RIGHT;
+
+  memfill(wram_array,0,0x2000);
+
+  for(i = 0; i < 5; ++i) {
+    eel_x[i] = i + 7;
+    eel_y[i] = 15;
+    eel_dir[i] = RIGHT;
+    *(wram_array + 15 * 32 + (i + 7)) = 1;
+  }
+
+  for(i = 0; i < 32; ++i) {
+    *(wram_array + 3 * 32 + i) = 1;
+    *(wram_array + 24 * 32 + i) = 1;
+  }
+
+  for(i = 3; i < 24; ++i) {
+    *(wram_array + i * 32 + 1) = 1;
+    *(wram_array + i * 32 + 30) = 1;
+  }
+
   eel_head = 4;
   eel_tail = 0;
   eel_speed = 4;
@@ -280,6 +293,7 @@ void start_game (void) {
 }
 
 void erase_tail (unsigned char x, unsigned char y) {
+  *(wram_array + y * 32 + x) = 0;
   one_vram_buffer(EMPTY_TILE, NTADR_A(x, y));
   for(i = 0; i < piranha_count; ++i) {
     if (piranha_eating_index[i] == eel_tail) {
@@ -297,6 +311,7 @@ void erase_head (unsigned char x, unsigned char y, unsigned char old_direction, 
 }
 
 void draw_head (unsigned char x, unsigned char y, unsigned char direction) {
+  *(wram_array + y * 32 + x) = 1;
   one_vram_buffer(head_per_direction[direction], NTADR_A(x, y));
 }
 
@@ -321,6 +336,10 @@ void move_eel (void) {
   case RIGHT:
     ++temp_x;
     break;
+  }
+
+  if (*(wram_array + temp_y * 32 + temp_x)) {
+    return;
   }
 
   if (eel_growth > 0) {
