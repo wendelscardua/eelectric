@@ -91,7 +91,7 @@ unsigned char wram_array[0x2000];
 #pragma code-name ("CODE")
 
 const unsigned char palette_bg[] = {
-                                    0x02,0x1a,0x2a,0x3a,0x02,0x07,0x17,0x3c,0x02,0x06,0x16,0x26,0x02,0x09,0x19,0x29
+                                    0x02,0x1a,0x2a,0x3a,0x02,0x07,0x17,0x3c,0x02,0x07,0x28,0x0f,0x02,0x09,0x19,0x29
 };
 
 const unsigned char palette_spr[]={
@@ -214,7 +214,7 @@ void start_game (void) {
   eel_speed = 4;
   eel_growth = 4;
   eel_frame_counter = 0;
-  eel_energy = 0xff;
+  eel_energy = 64;
   eel_health = eel_max_health = 1000;
   eel_level_up = 0;
   current_direction = RIGHT;
@@ -285,7 +285,7 @@ void move_eel (void) {
 }
 
 void shock_attack (void) {
-  if (eel_energy < 0xff) return;
+  if (eel_energy < 64) return;
 
   // TODO shock effect
   for(i = 0; i < piranha_count; ++i) {
@@ -294,7 +294,7 @@ void shock_attack (void) {
     }
   }
 
-  eel_energy = 0x00;
+  eel_energy = 0;
 }
 
 void handle_moving_input (void) {
@@ -448,7 +448,7 @@ void move_piranhas (void) {
         }
         eel_health += 80;
         if (eel_health > eel_max_health) eel_health = eel_max_health;
-        if (eel_energy < 0xf8) eel_energy += 0x8;
+        if (eel_energy < 64-8) eel_energy += 8;
         if (eel_length + 2 < EEL_MAX_SIZE) eel_growth = 2;
         break;
       }
@@ -466,11 +466,22 @@ void move_piranhas (void) {
 }
 
 void check_eel_status (void) {
-  if (eel_energy < 0xff) ++eel_energy;
-  if (eel_energy < 0xff) ++eel_energy;
-  // TODO display energy, hp, etc
+  if (eel_energy < 64) ++eel_energy;
+  // TODO display hp, etc
+  temp_x = 4;
+  for(i = 0; i < 4; ++i) {
+    if (i * 16 > eel_energy) {
+      temp = 0;
+    } else {
+      temp = eel_energy - i * 16;
+      if (temp > 16) temp = 16;
+      temp = temp >> 1;
+    }
+    one_vram_buffer(0x12 + temp, NTADR_A(temp_x, 26));
+    one_vram_buffer(0x12 + temp, NTADR_A(temp_x, 27));
+    ++temp_x;
+  }
 }
-
 void go_to_title (void) {
   ppu_off(); // screen off
   // draw some things
