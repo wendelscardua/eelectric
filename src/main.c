@@ -565,7 +565,7 @@ void move_piranhas (void) {
         break;
       }
       temp = rand8();
-      if (temp < 0x08) {
+      if (temp < 0x12) {
         ++piranha_y[i];
         if (piranha_y[i] > BOTTOM_BORDER) {
           delete_piranha(i);
