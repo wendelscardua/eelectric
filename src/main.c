@@ -435,7 +435,9 @@ void maybe_add_piranhas (void) {
   --piranha_spawn_timer;
   if (piranha_spawn_timer > 0) return;
 
-  piranha_spawn_timer = 2 * rand8();
+  temp_int = rand16();
+
+  piranha_spawn_timer = (temp_int & 0xff) + (temp_int >> 8) + 60;
 
   piranha_state[piranha_count] = Swimming;
 
